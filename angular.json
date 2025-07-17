@@ -13,6 +13,7 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "index": "src/client/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "assets": [
@@ -22,12 +23,12 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/client/styles.css"
             ],
             "server": "src/main.server.ts",
             "outputMode": "server",
             "ssr": {
-              "entry": "src/server.ts"
+              "entry": "src/server/api/index.ts"
             }
           },
           "configurations": {
@@ -64,10 +65,12 @@
               "buildTarget": "ng-trpc-test:build:development"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "development",
+          "options": {}
         },
         "extract-i18n": {
-          "builder": "@angular/build:extract-i18n"
+          "builder": "@angular/build:extract-i18n",
+          "options": {}
         },
         "test": {
           "builder": "@angular/build:karma",
@@ -80,7 +83,7 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/client/styles.css"
             ]
           }
         }
