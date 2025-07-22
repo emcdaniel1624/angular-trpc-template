@@ -11,8 +11,13 @@ function getBaseUrl() {
 export const api = createTRPCProxyClient<AppRouter>({
   links: [
     httpLink({
-      url: `${getBaseUrl()}/trpc`,
+      url: `${getBaseUrl()}/api/trpc`,
       transformer: superjson,
+      //headers() {
+      //  return {
+      //    'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+      //  };
+      //}
     }),
   ],
 });

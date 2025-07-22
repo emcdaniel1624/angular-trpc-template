@@ -1,8 +1,8 @@
-import { Component, effect, resource } from '@angular/core'
+import { Component, resource } from '@angular/core'
 import { api } from './utils'
 
 @Component({
-  selector: 'app-root',
+  selector: 'app',
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div class="container mx-auto px-4 py-8 max-w-4xl">
@@ -38,9 +38,4 @@ import { api } from './utils'
 })
 export class App {
   posts = resource({ loader: () => api.posts.getAll.query() })
-  constructor() {
-    effect(() => {
-      console.log("Error: ", this.posts.error())
-    })
-  }
 }

@@ -9,7 +9,9 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
-app.use('/trpc', trpcExpress.createExpressMiddleware({
+//app.all("/api/auth/*", toNodeHandler(auth));
+
+app.use('/api/trpc', trpcExpress.createExpressMiddleware({
   router: appRouter,
   createContext,
 }));

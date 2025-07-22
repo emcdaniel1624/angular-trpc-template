@@ -5,10 +5,13 @@ import superjson from "superjson";
 import * as trpcExpress from '@trpc/server/adapters/express';
 import { eq } from 'drizzle-orm';
 import { posts } from '../db/schema';
+import { auth } from '../auth/auth';
+import { fromNodeHeaders } from 'better-auth/node';
 
 export const createContext = async (opts: trpcExpress.CreateExpressContextOptions) => {
   return {
     db,
+    auth,
     ...opts
   }
 };
@@ -32,6 +35,27 @@ const t = initTRPC.context<Context>().create({
 const publicProcedure = t.procedure;
 const router = t.router;
 
+const authenticatedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  const session = await ctx.auth.api.getSession({
+    headers: fromNodeHeaders(ctx.req.headers),
+  });
+  if (!session) {
+    throw new Error('Unauthorized');
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      session,
+    },
+  });
+});
+
+const authenticatedRouter = t.router({
+  hello: authenticatedProcedure.query(() => {
+    return 'Hello authenticated user!';
+  })
+});
+
 export const appRouter = router({
   posts: {
     getAll: publicProcedure.query(async ({ ctx }) => {
@@ -46,7 +70,8 @@ export const appRouter = router({
       if (!post) throw new Error('Post not found');
       return post;
     }),
-  }
+  },
+  authenticated: authenticatedRouter,
 });
 
 export type AppRouter = typeof appRouter;
