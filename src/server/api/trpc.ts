@@ -6,7 +6,7 @@ import * as trpcExpress from '@trpc/server/adapters/express';
 import { eq } from 'drizzle-orm';
 import { posts } from '../db/schema';
 import { auth } from '../auth/auth';
-import { fromNodeHeaders } from 'better-auth/node';
+//import { fromNodeHeaders } from 'better-auth/node';
 
 export const createContext = async (opts: trpcExpress.CreateExpressContextOptions) => {
   return {
@@ -35,26 +35,26 @@ const t = initTRPC.context<Context>().create({
 const publicProcedure = t.procedure;
 const router = t.router;
 
-const authenticatedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  const session = await ctx.auth.api.getSession({
-    headers: fromNodeHeaders(ctx.req.headers),
-  });
-  if (!session) {
-    throw new Error('Unauthorized');
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      session,
-    },
-  });
-});
+//const authenticatedProcedure = t.procedure.use(async ({ ctx, next }) => {
+//  const session = await ctx.auth.api.getSession({
+//    headers: fromNodeHeaders(ctx.req.headers),
+//  });
+//  if (!session) {
+//    throw new Error('Unauthorized');
+//  }
+//  return next({
+//    ctx: {
+//      ...ctx,
+//      session,
+//    },
+//  });
+//});
 
-const authenticatedRouter = t.router({
-  hello: authenticatedProcedure.query(() => {
-    return 'Hello authenticated user!';
-  })
-});
+//const authenticatedRouter = t.router({
+//  hello: authenticatedProcedure.query(() => {
+//    return 'Hello authenticated user!';
+//  })
+//});
 
 export const appRouter = router({
   posts: {
@@ -70,8 +70,27 @@ export const appRouter = router({
       if (!post) throw new Error('Post not found');
       return post;
     }),
-  },
-  authenticated: authenticatedRouter,
+    create: publicProcedure
+      .input(z.object({
+        title: z.string(),
+        content: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const newPost = {
+          title: input.title,
+          content: input.content || '',
+        };
+        const [createdPost] = await ctx.db.insert(posts).values(newPost).returning();
+        return createdPost;
+      }),
+    delete: publicProcedure
+      .input(z.number())
+      .mutation(async ({ ctx, input }) => {
+        const deletedPost = await ctx.db.delete(posts).where(eq(posts.id, input)).returning();
+        if (!deletedPost) throw new Error('Post not found');
+        return deletedPost;
+      }),
+  }
 });
 
 export type AppRouter = typeof appRouter;

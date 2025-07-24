@@ -9,6 +9,7 @@ import { provideClientHydration, withEventReplay } from '@angular/platform-brows
 import { provideServerRendering, withRoutes } from '@angular/ssr'
 import { Routes } from '@angular/router'
 import { RenderMode, ServerRoute } from '@angular/ssr'
+import { provideTanStackQuery, QueryClient } from '@tanstack/angular-query-experimental'
 
 const serverRoutes: ServerRoute[] = [
   {
@@ -24,7 +25,8 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideClientHydration(withEventReplay())
+    provideClientHydration(withEventReplay()),
+    provideTanStackQuery(new QueryClient()),
   ]
 }
 
