@@ -3,7 +3,7 @@ import { z, ZodError } from 'zod';
 import { db } from '../db';
 import superjson from "superjson";
 import * as trpcExpress from '@trpc/server/adapters/express';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { posts } from '../db/schema';
 import { auth } from '../auth/auth';
 //import { fromNodeHeaders } from 'better-auth/node';
@@ -56,6 +56,49 @@ const router = t.router;
 //  })
 //});
 
+async function generateTxId(
+  tx: Parameters<
+    Parameters<typeof import("../db/index").db.transaction>[0]
+  >[0]
+): Promise<number> {
+  // The ::xid cast strips off the epoch, giving you the raw 32-bit value
+  // that matches what PostgreSQL sends in logical replication streams
+  // (and then exposed through Electric which we'll match against
+  // in the client).
+  const result = await tx.execute(
+    sql`SELECT pg_current_xact_id()::xid::text as txid`
+  )
+  const txid = result[0]['txid'];
+
+  if (txid === undefined) {
+    throw new Error(`Failed to get transaction ID`)
+  }
+
+  return parseInt(txid as string, 10)
+}
+
+const createPostInput = z.object({
+  title: z.string(),
+  content: z.string().optional(),
+})
+
+export type CreatePostInput = z.infer<typeof createPostInput>;
+
+const createPostMutation = t.procedure
+  .input(createPostInput)
+  .mutation(async ({ ctx, input }) => {
+    const newPost = {
+      title: input.title,
+      content: input.content || '',
+    };
+    const result = await ctx.db.transaction(async (tx) => {
+      const txid = await generateTxId(tx);
+      const [createdPost] = await tx.insert(posts).values(newPost).returning()
+      return { post: createdPost, txid };
+    });
+    return result;
+  });
+
 export const appRouter = router({
   posts: {
     getAll: publicProcedure.query(async ({ ctx }) => {
@@ -70,25 +113,17 @@ export const appRouter = router({
       if (!post) throw new Error('Post not found');
       return post;
     }),
-    create: publicProcedure
-      .input(z.object({
-        title: z.string(),
-        content: z.string().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const newPost = {
-          title: input.title,
-          content: input.content || '',
-        };
-        const [createdPost] = await ctx.db.insert(posts).values(newPost).returning();
-        return createdPost;
-      }),
+    create: createPostMutation,
     delete: publicProcedure
       .input(z.number())
       .mutation(async ({ ctx, input }) => {
-        const deletedPost = await ctx.db.delete(posts).where(eq(posts.id, input)).returning();
-        if (!deletedPost) throw new Error('Post not found');
-        return deletedPost;
+        const result = await ctx.db.transaction(async (tx) => {
+          const txid = await generateTxId(tx);
+          const [deletedPost] = await tx.delete(posts).where(eq(posts.id, input)).returning()
+          if (!deletedPost) throw new Error('Post not found');
+          return { post: deletedPost, txid };
+        });
+        return result;
       }),
   }
 });

@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import { index, pgTableCreator } from "drizzle-orm/pg-core";
 
-export const createTable = pgTableCreator((name) => `app.${name}`);
+export const createTable = pgTableCreator((name) => name);
 
 export const posts = createTable(
-  "post",
+  "posts",
   (d) => ({
     id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
     title: d.varchar({ length: 256 }).notNull(),

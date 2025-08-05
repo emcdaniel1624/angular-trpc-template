@@ -30,10 +30,8 @@ export const appConfig: ApplicationConfig = {
   ]
 }
 
-const serverConfig: ApplicationConfig = {
+export const config = mergeApplicationConfig(appConfig, {
   providers: [
     provideServerRendering(withRoutes(serverRoutes)),
   ]
-}
-
-export const config = mergeApplicationConfig(appConfig, serverConfig)
+})
